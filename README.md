@@ -3,6 +3,52 @@
 This repository contains a commandline client meant to simulate the MQTT
 behavior of the Open Air device.
 
+# Usage
+
+CLI binaries for Windows, Mac and Linux are available in from the Github
+releases tab.
+
+	Usage of openair_mqtt_sim:
+	  -c int
+		number of clients to simulate (default 1)
+	  -counter
+		add a counter to disambiguate messsages
+	  -f int
+		how many seconds to wait between sending measurements (default 10)
+	  -h string
+		broker url to connect to (default "tcp://localhost:1883")
+	  -n int
+		number of total request, -1 for continuous (default 10)
+	  -qos int
+		specify qos value (0,1,2 at most, at least, exactly once)
+	  -s	suppress detailed output about sent messages
+	  -sha
+		use sha-1 hashed mac instead of raw mac
+	  -version
+		print version & exit
+
+E.g. in order to simulate 5 clients sending messages each every 15
+minutes a total of 10 times each:
+
+	$ openair_mqtt_sim -c 5 -n 10 -f 900 
+					# 15min = 15 * 60 seconds
+
+Use the `-sha` flag f a sha-1 hash of the mac should be used for both
+the clientid and within the topic.
+
+QOS (quality of service) is set to 0 (at most once) by default. To
+experiment with other settings, use the `-qos` flag. Similarly use
+`-counter` to prefix each set of values with a per client counter.
+
+# Building
+
+Source the `xcompile.sh` script to build binaries for Windows, Mac and Linux.
+
+# Future Directions
+
+Code will be expanded to handle TLS connections as well as TLS client
+authentication.
+
 # MQTT Behavior
 
 ## Authentication

@@ -30,6 +30,8 @@ type MqttClientSim struct {
 	NumRequests int           // total number of requests to send
 	LogRequests bool          // whether or not to be verbose
 	UseSha      bool          // use sha1 hash of mac instead of mac
+	UseCounter  bool          // use a counter as the first value transmitted
+	Qos         byte
 }
 
 func (cl *MqttClientSim) RunSimulation() {
@@ -69,11 +71,14 @@ func (cl *MqttClientSim) runSimulation(wg *sync.WaitGroup, clientNum int) {
 		}
 		for _, sensor := range device.Sensors {
 			value := sensor.Value()
+			if cl.UseCounter {
+				value = fmt.Sprintf("%d,%s", i, value)
+			}
 			if cl.LogRequests {
 				fmt.Fprintf(os.Stderr, "%s t: %s msg: %s\n", time.Now().Format("2006-01-02T15:04:05.999"), device.Topic(sensor), value)
 			}
 			sleepJitter(10*time.Millisecond, 0.1)
-			client.Publish(device.Topic(sensor), 0, false, value)
+			client.Publish(device.Topic(sensor), cl.Qos, false, value)
 
 		}
 	}

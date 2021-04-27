@@ -16,9 +16,19 @@ var (
 	numRequests = flag.Int("n", 10, "number of total request, -1 for continuous")
 	silent      = flag.Bool("s", false, "suppress detailed output about sent messages")
 	useSha      = flag.Bool("sha", false, "use sha-1 hashed mac instead of raw mac")
+	useCounter  = flag.Bool("counter", false, "add a counter to disambiguate messsages")
+	qos         = flag.Int("qos", 0, "specify qos value (0,1,2 at most, at least, exactly once)")
+	_version    = flag.Bool("version", false, "print version & exit")
+
+	version string
 )
 
+func banner() {
+	fmt.Fprintf(os.Stderr, "version: %s\n", version)
+}
+
 func summary() {
+	banner()
 	fmt.Fprintf(os.Stderr, "simulating %d clients sending messages every %d seconds\n",
 		*numClients, *frequency)
 	if *numRequests > 0 {
@@ -26,7 +36,7 @@ func summary() {
 	} else {
 		fmt.Fprintf(os.Stderr, "continuously. Press Ctl-C to interrupt.\n")
 	}
-	fmt.Fprintf(os.Stderr, "target host: %s\n\n", *host)
+	fmt.Fprintf(os.Stderr, "target host: %s qos: %d\n\n", *host, *qos)
 
 	fmt.Fprintf(os.Stderr, "client ids:\n")
 	for i := 0; i != *numClients; i++ {
@@ -46,6 +56,11 @@ func summary() {
 func main() {
 	flag.Parse()
 
+	if *_version {
+		banner()
+		os.Exit(0)
+	}
+
 	if !*silent {
 		summary()
 	}
@@ -57,6 +72,8 @@ func main() {
 		*numRequests,
 		!*silent,
 		*useSha,
+		*useCounter,
+		byte(*qos),
 	}
 
 	sim.RunSimulation()
