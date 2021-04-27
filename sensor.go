@@ -1,37 +1,53 @@
 package openairMqttSimulator
 
 import (
+	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"net"
 )
 
-func MakeMAC(id int32) net.HardwareAddr {
+func MakeMAC(id int32) string {
 	bs := make([]byte, 6)
 	binary.PutVarint(bs, int64(id))
 	for i, _ := range bs {
 		bs[i] = byte((id >> (i * 8)) & 0xff)
 	}
-	return net.HardwareAddr(bs)
+	return net.HardwareAddr(bs).String()
+}
+
+func MakeMacSha(id int32) string {
+
+	bs := make([]byte, 6)
+	binary.PutVarint(bs, int64(id))
+	for i, _ := range bs {
+		bs[i] = byte((id >> (i * 8)) & 0xff)
+	}
+	return fmt.Sprintf("%x", sha1.Sum(bs))
 }
 
 type Device struct {
-	DeviceId net.HardwareAddr
+	DeviceId string
 	Sensors  []Sensor
 }
 
-func NewQuadsenseDevice(id int32) Device {
+func NewQuadsenseDevice(id int32, useSha bool) Device {
+	var deviceId string
+	if useSha {
+		deviceId = MakeMacSha(id)
+	} else {
+		deviceId = MakeMAC(id)
+	}
 	device := Device{
-		MakeMAC(id),
+		deviceId,
 		[]Sensor{NO2, NO, OX, CO, BME0, BME1, SDS011},
 	}
 	return device
 }
 
-// TODO: mac as sha
 func (dev *Device) Topic(s Sensor) string {
-	return fmt.Sprintf("/%s/%s", dev.DeviceId.String(), s.Name)
+	return fmt.Sprintf("/%s/%s", dev.DeviceId, s.Name)
 }
 
 // Sensor contains the name, included in the topic as well as the

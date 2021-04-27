@@ -14,7 +14,8 @@ var (
 	numClients  = flag.Int("c", 1, "number of clients to simulate")
 	frequency   = flag.Int("f", 10, "how many seconds to wait between sending measurements")
 	numRequests = flag.Int("n", 10, "number of total request, -1 for continuous")
-	silent      = flag.Bool("s", false, "suppross detailed output about sent messages")
+	silent      = flag.Bool("s", false, "suppress detailed output about sent messages")
+	useSha      = flag.Bool("sha", false, "use sha-1 hashed mac instead of raw mac")
 )
 
 func summary() {
@@ -29,8 +30,13 @@ func summary() {
 
 	fmt.Fprintf(os.Stderr, "client ids:\n")
 	for i := 0; i != *numClients; i++ {
-		id := oaSim.MakeMAC(int32(i)).String()
-		fmt.Fprintf(os.Stderr, "\t%s\n", id)
+		id := oaSim.MakeMAC(int32(i))
+		if *useSha {
+			shaId := oaSim.MakeMacSha(int32(i))
+			fmt.Fprintf(os.Stderr, "\t%s (mac: %s)\n", shaId, id)
+		} else {
+			fmt.Fprintf(os.Stderr, "\t%s\n", id)
+		}
 	}
 
 	fmt.Fprintf(os.Stderr, "\n\n")
@@ -50,6 +56,7 @@ func main() {
 		time.Duration(*frequency) * time.Second,
 		*numRequests,
 		!*silent,
+		*useSha,
 	}
 
 	sim.RunSimulation()

@@ -28,7 +28,8 @@ type MqttClientSim struct {
 	NumClients  int           // number of client to run simultaneously
 	Frequency   time.Duration // how long to sleep between "measurements"
 	NumRequests int           // total number of requests to send
-	LogRequests bool
+	LogRequests bool          // whether or not to be verbose
+	UseSha      bool          // use sha1 hash of mac instead of mac
 }
 
 func (cl *MqttClientSim) RunSimulation() {
@@ -57,21 +58,23 @@ func sleepJitter(d time.Duration, amt float32) {
 func (cl *MqttClientSim) runSimulation(wg *sync.WaitGroup, clientNum int) {
 	defer wg.Done()
 
-	device := NewQuadsenseDevice(int32(clientNum))
-	client, err := newMqttClient(cl.BrokerUrl, device.DeviceId.String())
+	device := NewQuadsenseDevice(int32(clientNum), cl.UseSha)
+	client, err := newMqttClient(cl.BrokerUrl, device.DeviceId)
 	if err != nil {
 		panic(err)
 	}
 	for i := 0; i != cl.NumRequests; i++ {
+		if i != 0 {
+			sleepJitter(cl.Frequency, 0.01)
+		}
 		for _, sensor := range device.Sensors {
 			value := sensor.Value()
 			if cl.LogRequests {
 				fmt.Fprintf(os.Stderr, "%s t: %s msg: %s\n", time.Now().Format("2006-01-02T15:04:05.999"), device.Topic(sensor), value)
 			}
-			client.Publish(device.Topic(sensor), 0, false, value)
 			sleepJitter(10*time.Millisecond, 0.1)
+			client.Publish(device.Topic(sensor), 0, false, value)
 
 		}
-		sleepJitter(cl.Frequency, 0.01)
 	}
 }
