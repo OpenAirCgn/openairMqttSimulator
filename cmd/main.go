@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -19,6 +22,7 @@ var (
 	useCounter  = flag.Bool("counter", false, "add a counter to disambiguate messsages")
 	qos         = flag.Int("qos", 0, "specify qos value (0,1,2 at most, at least, exactly once)")
 	_version    = flag.Bool("version", false, "print version & exit")
+	ca_pem      = flag.String("ca-pem", "", "path to a (server) ca crt file (pem)")
 
 	version string
 )
@@ -54,7 +58,22 @@ func summary() {
 	fmt.Fprintf(os.Stderr, "\n\n")
 
 }
+func createTLSConfig() *tls.Config {
+	cfg := &tls.Config{}
+	certPool := x509.NewCertPool()
+	if *ca_pem != "" {
+		if ca, err := ioutil.ReadFile(*ca_pem); err != nil {
+			fmt.Fprintf(os.Stderr, "Could read: %s (%v)\n", *ca_pem, err)
+			flag.Usage()
+			os.Exit(1)
+		} else {
+			certPool.AppendCertsFromPEM(ca)
+		}
 
+	}
+	cfg.RootCAs = certPool
+	return cfg
+}
 func main() {
 	flag.Parse()
 
@@ -67,8 +86,11 @@ func main() {
 		summary()
 	}
 
+	tlsConfig := createTLSConfig()
+
 	sim := oaSim.MqttClientSim{
 		*host,
+		tlsConfig,
 		*numClients,
 		time.Duration(*frequency) * time.Second,
 		*numRequests,

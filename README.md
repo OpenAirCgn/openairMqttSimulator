@@ -44,6 +44,12 @@ experiment with other settings, use the `-qos` flag. Similarly use
 
 Source the `xcompile.sh` script to build binaries for Windows, Mac and Linux.
 
+# Testing
+
+using: test.mosquitto.org 1883 tcp://test.mosquitto.org:1883
+
+for TLS: ... : 8883  tls://test.mosquitto.org:8883 -ca_cert test/mosquitto.org.crt
+
 # Future Directions
 
 Code will be expanded to handle TLS connections as well as TLS client

@@ -1,6 +1,7 @@
 package openairMqttSimulator
 
 import (
+	"crypto/tls"
 	"fmt"
 	"math/rand"
 	"os"
@@ -10,21 +11,9 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// creates a new (acutal, not simulated) mqtt client, connecting to the
-// indicated URL using the provided client id.
-func newMqttClient(url string, clientId string) (mqtt.Client, error) {
-	options := mqtt.NewClientOptions()
-	options.AddBroker(url)
-	options.SetClientID(clientId)
-	client := mqtt.NewClient(options)
-	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		return nil, token.Error()
-	}
-	return client, nil
-}
-
 type MqttClientSim struct {
-	BrokerUrl   string        // tcp://bla:1883
+	BrokerUrl   string        // tcp://bla:1883 tls://... ws:// wss://
+	TLSConfig   *tls.Config   // optional TLS configuration
 	NumClients  int           // number of client to run simultaneously
 	Frequency   time.Duration // how long to sleep between "measurements"
 	NumRequests int           // total number of requests to send
@@ -57,18 +46,34 @@ func sleepJitter(d time.Duration, amt float32) {
 
 }
 
+// creates a new (acutal, not simulated) mqtt client, connecting to the
+// indicated URL using the provided client id.
+func (cl *MqttClientSim) newMqttClient(clientId string) (mqtt.Client, error) {
+	options := mqtt.NewClientOptions()
+	options.AddBroker(cl.BrokerUrl)
+	options.SetClientID(clientId)
+	cfg := cl.TLSConfig
+	if cfg == nil {
+		cfg = &tls.Config{}
+	}
+	options.SetTLSConfig(cfg)
+	client := mqtt.NewClient(options)
+	if token := client.Connect(); token.Wait() && token.Error() != nil {
+		return nil, token.Error()
+	}
+	return client, nil
+}
+
 func (cl *MqttClientSim) runSimulation(wg *sync.WaitGroup, clientNum int) {
 	defer wg.Done()
 
 	device := NewQuadsenseDevice(int32(clientNum), cl.UseSha)
-	client, err := newMqttClient(cl.BrokerUrl, device.DeviceId)
+	client, err := cl.newMqttClient(device.DeviceId)
 	if err != nil {
 		panic(err)
-	} else {
-		defer func() {
-			client.Disconnect(500)
-		}()
 	}
+	defer client.Disconnect(500)
+
 	for i := 0; i != cl.NumRequests; i++ {
 		if i != 0 {
 			sleepJitter(cl.Frequency, 0.01)
