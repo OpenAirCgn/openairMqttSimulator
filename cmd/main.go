@@ -13,16 +13,17 @@ import (
 )
 
 var (
-	host        = flag.String("h", "tcp://localhost:1883", "broker url to connect to")
-	numClients  = flag.Int("c", 1, "number of clients to simulate")
-	frequency   = flag.Int("f", 10, "how many seconds to wait between sending measurements")
-	numRequests = flag.Int("n", 10, "number of total request, -1 for continuous")
-	silent      = flag.Bool("s", false, "suppress detailed output about sent messages")
-	useSha      = flag.Bool("sha", false, "use sha-1 hashed mac instead of raw mac")
-	useCounter  = flag.Bool("counter", false, "add a counter to disambiguate messsages")
-	qos         = flag.Int("qos", 0, "specify qos value (0,1,2 at most, at least, exactly once)")
-	_version    = flag.Bool("version", false, "print version & exit")
-	ca_pem      = flag.String("ca-pem", "", "path to a (server) ca crt file (pem)")
+	host            = flag.String("h", "tcp://localhost:1883", "broker url to connect to")
+	numClients      = flag.Int("c", 1, "number of clients to simulate")
+	frequency       = flag.Int("f", 10, "how many seconds to wait between sending measurements")
+	numRequests     = flag.Int("n", 10, "number of total request, -1 for continuous")
+	silent          = flag.Bool("s", false, "suppress detailed output about sent messages")
+	useSha          = flag.Bool("sha", false, "use sha-1 hashed mac instead of raw mac")
+	useCounter      = flag.Bool("counter", false, "add a counter to disambiguate messsages")
+	qos             = flag.Int("qos", 0, "specify qos value (0,1,2 at most, at least, exactly once)")
+	_version        = flag.Bool("version", false, "print version & exit")
+	ca_pem          = flag.String("ca-pem", "", "path to a ca crt file (pem) to verify the server")
+	client_cert_dir = flag.String("client-certs", ".", "path to search for client certs and keys, named client_id.pem and client_id.crt respectively")
 
 	version string
 )
@@ -91,6 +92,7 @@ func main() {
 	sim := oaSim.MqttClientSim{
 		*host,
 		tlsConfig,
+		*client_cert_dir,
 		*numClients,
 		time.Duration(*frequency) * time.Second,
 		*numRequests,

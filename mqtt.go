@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,15 +13,16 @@ import (
 )
 
 type MqttClientSim struct {
-	BrokerUrl   string        // tcp://bla:1883 tls://... ws:// wss://
-	TLSConfig   *tls.Config   // optional TLS configuration
-	NumClients  int           // number of client to run simultaneously
-	Frequency   time.Duration // how long to sleep between "measurements"
-	NumRequests int           // total number of requests to send
-	LogRequests bool          // whether or not to be verbose
-	UseSha      bool          // use sha1 hash of mac instead of mac
-	UseCounter  bool          // use a counter as the first value transmitted
-	Qos         byte
+	BrokerUrl     string        // tcp://bla:1883 tls://... ws:// wss://
+	TLSConfig     *tls.Config   // optional TLS configuration
+	ClientCertDir string        // directory to search for tls client certificates.
+	NumClients    int           // number of client to run simultaneously
+	Frequency     time.Duration // how long to sleep between "measurements"
+	NumRequests   int           // total number of requests to send
+	LogRequests   bool          // whether or not to be verbose
+	UseSha        bool          // use sha1 hash of mac instead of mac
+	UseCounter    bool          // use a counter as the first value transmitted
+	Qos           byte
 }
 
 func (cl *MqttClientSim) RunSimulation() {
@@ -46,17 +48,37 @@ func sleepJitter(d time.Duration, amt float32) {
 
 }
 
+func setClientCertIfAvailable(clientId string, dir string, cfg *tls.Config) {
+	crtFN := fmt.Sprintf("%s/%s.crt", dir, clientId)
+	keyFN := fmt.Sprintf("%s/%s.pem", dir, clientId)
+
+	cert, err := tls.LoadX509KeyPair(crtFN, keyFN)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not load client cert for %s (%v)\n", clientId, err)
+		return
+	}
+	cfg.Certificates = []tls.Certificate{cert}
+}
+
 // creates a new (acutal, not simulated) mqtt client, connecting to the
 // indicated URL using the provided client id.
 func (cl *MqttClientSim) newMqttClient(clientId string) (mqtt.Client, error) {
 	options := mqtt.NewClientOptions()
 	options.AddBroker(cl.BrokerUrl)
 	options.SetClientID(clientId)
-	cfg := cl.TLSConfig
-	if cfg == nil {
-		cfg = &tls.Config{}
+
+	if strings.HasPrefix(cl.BrokerUrl, "tls://") || strings.HasPrefix(cl.BrokerUrl, "wss://") {
+		cfg := cl.TLSConfig
+		if cfg == nil {
+			cfg = &tls.Config{}
+		}
+
+		// attempt to set a client certificate if available
+		setClientCertIfAvailable(clientId, cl.ClientCertDir, cfg)
+
+		options.SetTLSConfig(cfg)
 	}
-	options.SetTLSConfig(cfg)
+
 	client := mqtt.NewClient(options)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return nil, token.Error()
