@@ -31,11 +31,13 @@ func summary() {
 	banner()
 	fmt.Fprintf(os.Stderr, "simulating %d clients sending messages every %d seconds\n",
 		*numClients, *frequency)
+
 	if *numRequests > 0 {
 		fmt.Fprintf(os.Stderr, "until each client has sent %d messages.\n", *numRequests)
 	} else {
 		fmt.Fprintf(os.Stderr, "continuously. Press Ctl-C to interrupt.\n")
 	}
+
 	fmt.Fprintf(os.Stderr, "target host: %s qos: %d\n\n", *host, *qos)
 
 	fmt.Fprintf(os.Stderr, "client ids:\n")

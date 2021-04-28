@@ -64,6 +64,10 @@ func (cl *MqttClientSim) runSimulation(wg *sync.WaitGroup, clientNum int) {
 	client, err := newMqttClient(cl.BrokerUrl, device.DeviceId)
 	if err != nil {
 		panic(err)
+	} else {
+		defer func() {
+			client.Disconnect(500)
+		}()
 	}
 	for i := 0; i != cl.NumRequests; i++ {
 		if i != 0 {
