@@ -71,10 +71,10 @@ Subscribe using e.g: `mosquitto_sub -h test.mosquitto.org -p 1883 -t
 '/7722745105e9e02e8f1aaf17f7b3aac5c56cd805/#'` to monitor transfer.
 
 In case TLS is used with the test.mosquitto.org server, connect to port
-8883 and use a tls:// url, i.e. tls://test.mosquitto.org:8883 instead of
-tcp://test.mosquitto.org:1883
+8883 and use a `tls://` url, i.e. `tls://test.mosquitto.org:8883` instead of
+`tcp://test.mosquitto.org:1883`
 
-TLS *client authentication* my be tested against port 8883. Ten client
+TLS *client authentication* my be tested against port 8884. Ten client
 certificates have been prepared and signed by mosquitto. These are
 available in the `test` directory. The client IDs correspond to the
 hashed version of the simulated MACs:
@@ -86,12 +86,12 @@ hashed version of the simulated MACs:
 A sample commandline to test client authentication would look like:
 
     $ openair_mqtt_sim \
-          -h tls://test.mosquitto.org:8883 \
-	  -sha    # use hashed macs (sample crt's assume hashes are being used) \
-	  -c 10   # use all ten clients we have certs for \
-	  -ca-pem test/mosquitto.org.crt \
-	          # mosquitto uses a self signed cert, need to provide CA cert to verify \
-	  -client_certs test # directory containing client certs 
+          -h tls://test.mosquitto.org:8884 \
+          -sha    # use hashed macs (sample crt's assume hashes are being used) \
+          -c 10   # use all ten clients we have certs for \
+          -ca-pem test/mosquitto.org.crt \
+                  # mosquitto uses a self signed cert, need to provide CA cert to verify \
+          -client_certs test # directory containing client certs 
 
 The `test` directory also contains scripts detailing how the test cert
 material was generated using the openssl cli. CSR's were signed using:
