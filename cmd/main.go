@@ -24,6 +24,7 @@ var (
 	_version        = flag.Bool("version", false, "print version & exit")
 	ca_pem          = flag.String("ca-pem", "", "path to a ca crt file (pem) to verify the server")
 	client_cert_dir = flag.String("client-certs", ".", "path to search for client certs and keys, named client_id.pem and client_id.crt respectively")
+	client_cfg      = flag.String("client-config", "", "path to client configuration, see test/client_list.json")
 
 	version string
 )
@@ -32,7 +33,7 @@ func banner() {
 	fmt.Fprintf(os.Stderr, "version: %s\n", version)
 }
 
-func summary() {
+func summary(list []oaSim.ClientCertConfig) {
 	banner()
 	fmt.Fprintf(os.Stderr, "simulating %d clients sending messages every %d seconds\n",
 		*numClients, *frequency)
@@ -46,14 +47,12 @@ func summary() {
 	fmt.Fprintf(os.Stderr, "target host: %s qos: %d\n\n", *host, *qos)
 
 	fmt.Fprintf(os.Stderr, "client ids:\n")
-	for i := 0; i != *numClients; i++ {
-		id := oaSim.MakeMAC(int32(i))
-		if *useSha {
-			shaId := oaSim.MakeMacSha(int32(i))
-			fmt.Fprintf(os.Stderr, "\t%s (mac: %s)\n", shaId, id)
-		} else {
-			fmt.Fprintf(os.Stderr, "\t%s\n", id)
+	for _, cfg := range list {
+		fmt.Fprintf(os.Stderr, "\t%s", cfg.ClientId)
+		if cfg.MAC != "" {
+			fmt.Fprintf(os.Stderr, "(mac:%s)", cfg.MAC)
 		}
+		fmt.Fprintf(os.Stderr, "\n")
 	}
 
 	fmt.Fprintf(os.Stderr, "\n\n")
@@ -64,7 +63,7 @@ func createTLSConfig() *tls.Config {
 	certPool := x509.NewCertPool()
 	if *ca_pem != "" {
 		if ca, err := ioutil.ReadFile(*ca_pem); err != nil {
-			fmt.Fprintf(os.Stderr, "Could read: %s (%v)\n", *ca_pem, err)
+			fmt.Fprintf(os.Stderr, "Could not read: %s (%v)\n", *ca_pem, err)
 			flag.Usage()
 			os.Exit(1)
 		} else {
@@ -75,6 +74,28 @@ func createTLSConfig() *tls.Config {
 	cfg.RootCAs = certPool
 	return cfg
 }
+
+func populateClientCertConfigList() []oaSim.ClientCertConfig {
+	var list []oaSim.ClientCertConfig
+	for i := 0; i != *numClients; i++ {
+		var clientId string
+		if *useSha {
+			clientId = oaSim.MakeMacSha(int32(i))
+		} else {
+			clientId = oaSim.MakeMAC(int32(i))
+		}
+		cfg := oaSim.ClientCertConfig{
+			clientId,
+			fmt.Sprintf("%s/%s.crt", *client_cert_dir, clientId),
+			fmt.Sprintf("%s/%s.pem", *client_cert_dir, clientId),
+			oaSim.MakeMAC(int32(i)),
+		}
+
+		list = append(list, cfg)
+	}
+	return list
+}
+
 func main() {
 	flag.Parse()
 
@@ -83,8 +104,22 @@ func main() {
 		os.Exit(0)
 	}
 
+	var list []oaSim.ClientCertConfig
+	var err error
+	if *client_cfg != "" {
+		list, err = oaSim.LoadClientCertConfigList(*client_cfg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Could not read: %s (%v)\n", *client_cfg, err)
+			flag.Usage()
+			os.Exit(1)
+		}
+		*numClients = len(list)
+	} else {
+		list = populateClientCertConfigList()
+	}
+
 	if !*silent {
-		summary()
+		summary(list)
 	}
 
 	tlsConfig := createTLSConfig()
@@ -92,12 +127,10 @@ func main() {
 	sim := oaSim.MqttClientSim{
 		*host,
 		tlsConfig,
-		*client_cert_dir,
-		*numClients,
+		list,
 		time.Duration(*frequency) * time.Second,
 		*numRequests,
 		!*silent,
-		*useSha,
 		*useCounter,
 		byte(*qos),
 	}

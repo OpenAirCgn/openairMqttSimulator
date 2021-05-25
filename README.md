@@ -15,6 +15,8 @@ releases tab.
 		path to a ca crt file (pem) to verify the server cert
 	  -client-certs string
 		path to search for client certs and keys, named client_id.pem and client_id.crt respectively (default ".")
+          -client-config string
+    	        path to client configuration, see set "Client Configuration", below
 	  -counter
 		add a counter to disambiguate messsages
 	  -f int
@@ -45,6 +47,23 @@ QOS (quality of service) is set to 0 (at most once) by default. To
 experiment with other settings, use the `-qos` flag. Similarly use
 `-counter` to prefix each set of values with a per client counter.
 
+# Client Configuration
+
+By default, you specify the number of clients to use and the simulator
+"generates" them, i.e. a series of `ClientId`s corresponding to MAC
+addresses `00:00:00:00:00:00`, `01:00:00:00:00:00`, etc. are generated.
+If the `-sha` flag is present, this value is hashed.
+
+If the simulation finds corresponding `crt` and `pem` files in the
+`-client-certs-dir` directory, these certificates are used for TLS
+client authentication.
+
+An alternative approach is to provide a configuration file describing
+the `ClientId`s and certificate files to be used. The location of this
+file is specified using the `-client-config` flag, an example file is
+located [here](test/client_list.json)
+
+
 # Preliminary TLS support
 
 The simulation will attempt to use TLS in case the broker url is prefixed with
@@ -57,7 +76,7 @@ and key files should be provided with the `-client-certs` flag.
 Certificates and key files corresponding to a particular client ID
 should be named `<clientID>.crt` and `<clientID>.pem` respectively.
 
-Currently, pem files may not been protected by passphrase. See #Testing
+Currently, pem files may NOT been protected by passphrase. See #Testing
 
 # Building
 

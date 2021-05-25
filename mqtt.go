@@ -13,21 +13,19 @@ import (
 )
 
 type MqttClientSim struct {
-	BrokerUrl     string        // tcp://bla:1883 tls://... ws:// wss://
-	TLSConfig     *tls.Config   // optional TLS configuration
-	ClientCertDir string        // directory to search for tls client certificates.
-	NumClients    int           // number of client to run simultaneously
-	Frequency     time.Duration // how long to sleep between "measurements"
-	NumRequests   int           // total number of requests to send
-	LogRequests   bool          // whether or not to be verbose
-	UseSha        bool          // use sha1 hash of mac instead of mac
-	UseCounter    bool          // use a counter as the first value transmitted
-	Qos           byte
+	BrokerUrl    string             // tcp://bla:1883 tls://... ws:// wss://
+	TLSConfig    *tls.Config        // optional TLS configuration
+	ClientConfig []ClientCertConfig // list of client ids (and optional tls certs) to use in simulation
+	Frequency    time.Duration      // how long to sleep between "measurements"
+	NumRequests  int                // total number of requests to send
+	LogRequests  bool               // whether or not to be verbose
+	UseCounter   bool               // use a counter as the first value transmitted
+	Qos          byte
 }
 
 func (cl *MqttClientSim) RunSimulation() {
 	var wg sync.WaitGroup
-	for i := 0; i != cl.NumClients; i++ {
+	for i := 0; i != len(cl.ClientConfig); i++ {
 		wg.Add(1)
 		go cl.runSimulation(&wg, i)
 	}
@@ -48,24 +46,22 @@ func sleepJitter(d time.Duration, amt float32) {
 
 }
 
-func setClientCertIfAvailable(clientId string, dir string, cfg *tls.Config) {
-	crtFN := fmt.Sprintf("%s/%s.crt", dir, clientId)
-	keyFN := fmt.Sprintf("%s/%s.pem", dir, clientId)
+func setClientCertIfAvailable(cfg ClientCertConfig, tlsCfg *tls.Config) {
 
-	cert, err := tls.LoadX509KeyPair(crtFN, keyFN)
+	cert, err := tls.LoadX509KeyPair(cfg.CRTFilename, cfg.PEMFilename)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not load client cert for %s (%v)\n", clientId, err)
+		fmt.Fprintf(os.Stderr, "could not load client cert for %s (%v)\n", cfg.ClientId, err)
 		return
 	}
-	cfg.Certificates = []tls.Certificate{cert}
+	tlsCfg.Certificates = []tls.Certificate{cert}
 }
 
 // creates a new (acutal, not simulated) mqtt client, connecting to the
 // indicated URL using the provided client id.
-func (cl *MqttClientSim) newMqttClient(clientId string) (mqtt.Client, error) {
+func (cl *MqttClientSim) newMqttClient(clientNum int) (mqtt.Client, error) {
 	options := mqtt.NewClientOptions()
 	options.AddBroker(cl.BrokerUrl)
-	options.SetClientID(clientId)
+	options.SetClientID(cl.ClientConfig[clientNum].ClientId)
 
 	if strings.HasPrefix(cl.BrokerUrl, "tls://") || strings.HasPrefix(cl.BrokerUrl, "wss://") {
 		cfg := cl.TLSConfig
@@ -74,7 +70,7 @@ func (cl *MqttClientSim) newMqttClient(clientId string) (mqtt.Client, error) {
 		}
 
 		// attempt to set a client certificate if available
-		setClientCertIfAvailable(clientId, cl.ClientCertDir, cfg)
+		setClientCertIfAvailable(cl.ClientConfig[clientNum], cfg)
 
 		options.SetTLSConfig(cfg)
 	}
@@ -89,8 +85,8 @@ func (cl *MqttClientSim) newMqttClient(clientId string) (mqtt.Client, error) {
 func (cl *MqttClientSim) runSimulation(wg *sync.WaitGroup, clientNum int) {
 	defer wg.Done()
 
-	device := NewQuadsenseDevice(int32(clientNum), cl.UseSha)
-	client, err := cl.newMqttClient(device.DeviceId)
+	device := NewQuadsenseDevice(cl.ClientConfig[clientNum].ClientId)
+	client, err := cl.newMqttClient(clientNum)
 	if err != nil {
 		panic(err)
 	}

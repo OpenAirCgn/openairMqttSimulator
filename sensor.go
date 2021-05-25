@@ -32,13 +32,7 @@ type Device struct {
 	Sensors  []Sensor
 }
 
-func NewQuadsenseDevice(id int32, useSha bool) Device {
-	var deviceId string
-	if useSha {
-		deviceId = MakeMacSha(id)
-	} else {
-		deviceId = MakeMAC(id)
-	}
+func NewQuadsenseDevice(deviceId string) Device {
 	device := Device{
 		deviceId,
 		[]Sensor{NO2, NO, OX, CO, BME0, BME1, SDS011},

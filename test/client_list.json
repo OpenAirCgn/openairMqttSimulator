@@ -1,0 +1,20 @@
+[
+	{
+		"clientID":"2f5672cb76691b989bbd2022a5349939a2d7b952",
+		"crt"     :"test/2f5672cb76691b989bbd2022a5349939a2d7b952.crt",
+		"pem"     :"test/2f5672cb76691b989bbd2022a5349939a2d7b952.pem",
+		"comment" :"MAC addr is optional and for doc only."
+	},
+	{
+		"clientID":"500ce5edbda324f9a385f06a24094cee873bcf07",
+		"crt"     :"test/500ce5edbda324f9a385f06a24094cee873bcf07.crt",
+		"pem"     :"test/500ce5edbda324f9a385f06a24094cee873bcf07.pem",
+		"mac"     :"01:00:00:00:00:00"
+	},
+	{
+		"clientID":"7722745105e9e02e8f1aaf17f7b3aac5c56cd805",
+		"crt"     :"test/7722745105e9e02e8f1aaf17f7b3aac5c56cd805.crt",
+		"pem"     :"test/7722745105e9e02e8f1aaf17f7b3aac5c56cd805.pem",
+		"mac"     :"00:00:00:00:00:00"
+	}
+]
